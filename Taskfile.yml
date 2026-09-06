@@ -1,0 +1,56 @@
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - task --list
+    silent: true
+
+  install:
+    desc: Поставить зависимости в .venv
+    cmds:
+      - uv sync
+
+  test:
+    desc: Прогнать тесты (покрытие печатается в терминал, см. pyproject.toml)
+    cmds:
+      - uv run pytest
+
+  test-cov:
+    desc: Тесты плюс HTML-отчёт о покрытии в htmlcov/
+    cmds:
+      - uv run pytest --cov-report=html
+
+  lint:
+    desc: Линтер
+    cmds:
+      - uv run ruff check .
+
+  format:
+    desc: Отформатировать код
+    cmds:
+      - uv run ruff format .
+
+  types:
+    desc: Проверка типов
+    cmds:
+      - uv run mypy src/
+
+  secrets:
+    desc: Поиск секретов в файлах и в истории коммитов
+    cmds:
+      - gitleaks dir . --verbose
+      - gitleaks git . --verbose
+
+  hooks:
+    desc: Поставить pre-commit хуки
+    cmds:
+      - uv run pre-commit install
+
+  check:
+    desc: Линтер, типы, тесты, секреты
+    cmds:
+      - task: lint
+      - task: types
+      - task: test
+      - task: secrets
