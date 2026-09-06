@@ -13,7 +13,7 @@ import pytest
 from zoom_searcher import __version__
 from zoom_searcher.cli import main
 from zoom_searcher.config import Paths
-from zoom_searcher.search import Query, matches, search, stem_word, stems
+from zoom_searcher.search import Query, matches, search, stem_word, stems, tokenize
 
 Entries = list[tuple[str, str, str]]
 
@@ -95,12 +95,23 @@ def test_stems_drops_short_words() -> None:
 
 
 def test_matches_exact_and_fuzzy() -> None:
-    pool = {"капиталд", "уставн"}
+    tokens = tokenize("Обсудили уставный капиталда и договор")
 
-    assert matches("капита", pool) is True
-    assert matches("капита", pool, exact=True) is False
-    assert matches("уставн", pool, exact=True) is True
-    assert matches("рек", pool) is False
+    assert matches("уставный", tokens) is True
+    assert matches("капитал", tokens) is True
+    assert matches("капитал", tokens, exact=True) is False
+    assert matches("рек", tokens) is False
+
+
+def test_matches_inflection_by_word_prefix() -> None:
+    assert matches("устав", tokenize("Обсудили размер уставного фонда")) is True
+
+
+def test_over_stemmed_word_does_not_drag_in_neighbours() -> None:
+    """snowball срезает «устав» до «уста», и сравнение корней тянуло чужие слова."""
+    tokens = tokenize("Оборудование устарело, надо установить новое, все устанут")
+
+    assert matches("устав", tokens) is False
 
 
 def test_finds_word_by_stem(data_dir: Path) -> None:
@@ -253,7 +264,7 @@ def test_cli_json_output(
     payload = json.loads(capsys.readouterr().out)
     assert len(payload) == 1
     assert payload[0]["speaker"] == "Мария Сидорова"
-    assert payload[0]["matched"] == ["капита"]
+    assert payload[0]["matched"] == ["капитал"]
     assert len(payload[0]["context"]) == 3
 
 
